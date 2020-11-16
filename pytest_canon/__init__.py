@@ -6,55 +6,58 @@ from typing import Union, Callable, Optional
 __version__ = '1.0.0'
 
 
-class Config:
-    def __init__(
-        self,
-        dir_path: Union[str, Path] = '',
-        env_var: str = '',
-        assert_func: Optional[Callable[[str, str], None]] = None,
-        cast_func: Optional[Callable[[str], str]] = None,
-    ):
-        self.dir_path: Path = dir_path if isinstance(dir_path, Path) else Path(dir_path)
-        self.env_var = env_var
-        self.assert_func = assert_func
-        self.cast_func = cast_func
-        
-    def merge(self, other: Optional['Config']) -> 'Config':
-        return Config(
-            dir_path=other.dir_path or self.dir_path,
-            env_var=other.env_var or self.env_var,
-            assert_func=other.assert_func or self.assert_func,
-            cast_func=other.cast_func or self.cast_func,
-        ) if other else self
+global_dir_path: Path = Path('tests/dumps')
+global_env_var: str = 'PYTEST_UPDATE_REFS'
+global_assert_func: Optional[Callable[[str, str], None]] = None
+global_cast_func: Optional[Callable[[str], str]] = None
 
 
-global_config = Config(
-    dir_path=Path('tests/dumps'),
-    env_var='PYTEST_UPDATE_REFS',
-)
+def set_global_dir_path(dir_path: Union[Path, str]) -> None:
+    global global_dir_path
+    global_dir_path = Path(dir_path)
 
 
-def set_global_config(config):
-    global global_config
-    global_config = config.merge(global_config)
+def set_global_env_var(env_var: str) -> None:
+    global global_env_var
+    global_env_var = env_var
 
 
-def assert_equals_ref(value: str, name: str, config: Optional[Config] = None) -> None:
-    config_: Config = global_config.merge(config)
+def set_global_assert_func(assert_func: Optional[Callable[[str, str], None]]) -> None:
+    global global_assert_func
+    global_assert_func = assert_func
 
-    path = config_.dir_path / '{}.txt'.format(name)
 
-    if os.getenv(config_.env_var, ''):
+def set_global_cast_func(cast_func: Optional[Callable[[str], str]]) -> None:
+    global global_cast_func
+    global_cast_func = cast_func
+
+
+def assert_equals_ref(
+    value: str,
+    name: str,
+    dir_path: Optional[Union[Path, str]] = None,
+    env_var: str = '',
+    assert_func: Optional[Callable[[str, str], None]] = None,
+    cast_func: Optional[Callable[[str], str]] = None,
+) -> None:
+    dir_path_: Path = (Path(dir_path) if dir_path else None) or global_dir_path
+    env_var_ = env_var or global_env_var
+    assert_func_ = assert_func or global_assert_func
+    cast_func_ = cast_func or global_cast_func
+
+    path = dir_path_ / '{}.txt'.format(name)
+
+    if os.getenv(env_var_, ''):
         path.write_text(value)
         return
 
     expected = path.read_text()
 
-    if config_.cast_func:
-        value = config_.cast_func(value)
-        expected = config_.cast_func(expected)
+    if cast_func_:
+        value = cast_func_(value)
+        expected = cast_func_(expected)
 
-    if config_.assert_func:
-        config_.assert_func(value, expected)
+    if assert_func_:
+        assert_func_(value, expected)
     else:
         assert value == expected

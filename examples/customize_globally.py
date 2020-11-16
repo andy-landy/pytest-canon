@@ -1,26 +1,19 @@
 import re
 
-from pytest_canon import assert_equals_ref, Config, set_global_config
+from pytest_canon import *
 
-
-from my_tested_library import generate_words
+from my_tested_library import generate_long_text
 
 
 def my_assert(v1, v2):
-    assert v1 == v2
+    assert v1.lower() == v2.lower()
 
 
-def hide_addresses(text):
-    return re.sub(r'( at 0x)\w+', r'\1...',  text)
+set_global_dir_path('tests/dumps')  # optional
+set_global_env_var('PLS_UPDATE_REFS')  # optional
+set_global_assert_func(my_assert)  # optional
+set_global_cast_func(lambda s: s.upper())  # optional
 
 
-set_global_config(Config(
-    dir_path='tests/dumps',
-    env_var='PLS_UPDATE_REFS',
-    assert_func=my_assert,
-    cast_func=hide_addresses,
-))
-
-
-def test_generate_words():
-    assert_equals_ref(generate_words(n=10000), 'test_generate_words')
+def test_generate_long_text():
+    assert_equals_ref(generate_long_text(n=10000), 'test_generate_long_text')
